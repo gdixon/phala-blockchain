@@ -19,7 +19,7 @@ pub struct HelloWorld {
 pub enum Command {
     /// Increments the whisper in the contract by some number
     SetWhisper {
-        value: String,
+        whisper: String,
     },
 }
 
@@ -65,11 +65,11 @@ impl contracts::Contract<Command, Request, Response> for HelloWorld {
     fn handle_command(&mut self, _origin: &chain::AccountId, _txref: &TxRef, cmd: Command) -> TransactionStatus {
         match cmd {
             // Handle the `Increment` command with one parameter
-            Command::SetWhisper { value } => {
+            Command::SetWhisper { whisper } => {
                 // Get the current user
-                const current_user = AccountIdWrapper(_origin.clone());
+                let current_user = AccountIdWrapper(_origin.clone());
                 // Set the whisper value against the user.
-                self.whisper.insert(current_user, value);
+                self.whisper.insert(current_user, whisper);
                 // Returns TransactionStatus::Ok to indicate a successful transaction
                 TransactionStatus::Ok
             },
@@ -77,24 +77,25 @@ impl contracts::Contract<Command, Request, Response> for HelloWorld {
     }
 
     // Handles a direct query and responds to the query. It shouldn't modify the contract states.
-    fn handle_query(&mut self, _origin: Option<&chain::AccountId>, req: Request) -> Response {
+    fn handle_query(&mut self, origin: Option<&chain::AccountId>, req: Request) -> Response {
         let inner = || -> Result<Response, Error> {
             match req {
                 // Hanlde the `GetWhisper` request.
                 Request::GetWhisper => {
                     // ensure a user is defined in req
-                    if const Some(account) = origin {
+                    if let Some(account) = origin {
                         // get that user
-                        const current_user = AccountIdWrapper(account.clone());
+                        let current_user = AccountIdWrapper(account.clone());
                         // check theres a whisper defined for the user
                         if self.whisper.contains_key(&current_user) {
                             // Respond with the note in the notes.
-                            const whisper = self.whisper.get(&current_user);
+                            let whisper = self.whisper.get(&current_user);
 
                             // return the store whisper
                             return Ok(Response::GetWhisper { whisper: whisper.unwrap().clone() })
                         }
                     }
+                    Err(Error::NotAuthorized)
                 },
             }
         };
